@@ -17,8 +17,6 @@ def compute_rouge_score(llm_json, output_json):
     list_6 = []
     list_7 = []
     list_8 = []
-    final_list = []
-
     for i in data:
         ground_truths = i["ground_truth"]
         prediction = i["prediction"].split("\n\n")[0].strip()
@@ -77,10 +75,8 @@ def compute_rouge_score(llm_json, output_json):
     list_7_instance_cnt = int(math.floor(0.2 * list_7_cnt))
     list_8_instance_cnt = int(math.floor(0.2 * list_8_cnt))
 
-    for i in range(0,list_2_instance_cnt):
-        final_list.append(list_2[i])
-    for i in range(0,list_3_instance_cnt):
-        final_list.append(list_3[i])
+    final_list = [list_2[i] for i in range(0,list_2_instance_cnt)]
+    final_list.extend(list_3[i] for i in range(0,list_3_instance_cnt))
     for i in range(0,list_4_instance_cnt):
         final_list.append(list_4[i])
     for i in range(0,list_5_instance_cnt):
@@ -130,9 +126,7 @@ for filename in os.listdir(directory):
     cnt = compute_rouge_score(llm_json, output_json)
     print(cnt)
     total_cnt = total_cnt + cnt
-    row = []
-    row.append(filename)
-    row.append(cnt)
+    row = [filename, cnt]
     rows.append(row)
 
 print(total_cnt)

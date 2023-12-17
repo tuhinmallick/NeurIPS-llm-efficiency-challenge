@@ -212,9 +212,7 @@ class AxolotlTrainer(Trainer):
     def _get_bench_sampler(
         self, bench_dataset: Dataset
     ) -> Optional[torch.utils.data.Sampler]:
-        if self.args.world_size <= 1:
-            return SequentialSampler(bench_dataset)
-        return None
+        return SequentialSampler(bench_dataset) if self.args.world_size <= 1 else None
 
     def get_bench_dataloader(
         self,
@@ -372,10 +370,7 @@ class HFCausalTrainerBuilder(TrainerBuilderBase):
         return trainer
 
     def get_callbacks(self):
-        callbacks = []
-        callbacks.append(GPUStatsCallback(self.cfg))
-        callbacks.append(EvalFirstStepCallback)
-
+        callbacks = [GPUStatsCallback(self.cfg), EvalFirstStepCallback]
         if self.cfg.relora_steps:
             callbacks.append(ReLoRACallback(self.cfg))
 
@@ -416,9 +411,7 @@ class HFCausalTrainerBuilder(TrainerBuilderBase):
             self.cfg.fsdp or self.cfg.adapter == "qlora"
         ):
             return OneCycleLRSchedulerTrainer
-        if self.cfg.relora_steps:
-            return ReLoRATrainer
-        return AxolotlTrainer
+        return ReLoRATrainer if self.cfg.relora_steps else AxolotlTrainer
 
     def build(self, total_num_steps):
         warmup_steps = (
@@ -629,17 +622,11 @@ class HFCausalTrainerBuilder(TrainerBuilderBase):
                 importlib.import_module("torchdistx")
 
         data_collator_kwargs = {
-            "padding": True,  # True/"longest" is the default
+            "padding": True,
+            "pad_to_multiple_of": 64 * math.ceil(self.cfg.sequence_len / 64)
+            if self.cfg.pad_to_sequence_len
+            else 64,
         }
-        if self.cfg.pad_to_sequence_len:
-            data_collator_kwargs["pad_to_multiple_of"] = 64 * math.ceil(
-                self.cfg.sequence_len / 64
-            )
-        else:
-            # A100 is best at 64, while others at 8. Let's use the larger so we don't have to check
-            # https://docs.nvidia.com/deeplearning/performance/dl-performance-matrix-multiplication/index.html
-            data_collator_kwargs["pad_to_multiple_of"] = 64
-
         if self.cfg.is_llama_derived_model and self.cfg.landmark_attention:
             from axolotl.monkeypatch.llama_landmark_attn import (
                 add_mem_tokens,

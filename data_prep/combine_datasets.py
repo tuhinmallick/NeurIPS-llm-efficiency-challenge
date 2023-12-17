@@ -72,11 +72,12 @@ def prepare_maths_file():
     with open(file_path) as f:
         data = json.load(f)
 
-    sampled_data = []
-    for rec in data:
-        if len(f"{rec['instruction']} {rec['input']}".split(" ")) < 800 and "print(" not in rec['output']:
-            sampled_data.append(rec)
-
+    sampled_data = [
+        rec
+        for rec in data
+        if len(f"{rec['instruction']} {rec['input']}".split(" ")) < 800
+        and "print(" not in rec['output']
+    ]
     random.shuffle(sampled_data)
     sampled_data = sampled_data[:250000]
     print(f"maths_reasoning dataset size: {len(sampled_data)}")
@@ -89,11 +90,11 @@ def prepare_platypus_file():
     with open(file_path) as f:
         data = json.load(f)
 
-    sampled_data = []
-    for rec in data:
-        if len(f"{rec['instruction']} {rec['input']}".split(" ")) < 800:
-            sampled_data.append(rec)
-
+    sampled_data = [
+        rec
+        for rec in data
+        if len(f"{rec['instruction']} {rec['input']}".split(" ")) < 800
+    ]
     random.shuffle(sampled_data)
     sampled_data = sampled_data
     print(f"platypus dataset size: {len(sampled_data)}")
@@ -195,8 +196,7 @@ for each in data:
     if len(each['input'].split(" ")) <= 4 or len(each['output'].split(" ")) < 1:
         continue
 
-    rec = {}
-    rec['question'] = ''
+    rec = {'question': ''}
     if len(each['instruction'].strip()) > 0:
         rec['question'] += f"{instruction_prefix}{each['instruction']}\n\n"
     rec['question'] += f"{input_prefix}{each['input']}\n\n"
@@ -208,8 +208,8 @@ print(f"final_dataset size: {len(final_dataset)}")
 train_dataset = final_dataset[:int(0.98*len(final_dataset))]
 eval_dataset = final_dataset[int(0.98*len(final_dataset)):]
 
-with open(f"/home/minimalist/Downloads/nips_training_data/train_dataset.json", 'w') as f:
+with open("/home/minimalist/Downloads/nips_training_data/train_dataset.json", 'w') as f:
     json.dump(train_dataset, f, indent=1)
 
-with open(f"/home/minimalist/Downloads/nips_training_data/eval_dataset.json", 'w') as f:
+with open("/home/minimalist/Downloads/nips_training_data/eval_dataset.json", 'w') as f:
     json.dump(eval_dataset, f, indent=1)
