@@ -12,23 +12,20 @@ def modify_input(question):
     return question
 
 def remove_hash(answer: str):
-    if "####" in answer:
-        return answer[:answer.rindex("####")].strip()
-    return answer
+    return answer[:answer.rindex("####")].strip() if "####" in answer else answer
 
 def format_response(answer: str, answer_identifier: str):
     answer_prefix_len = len(answer_identifier)
-    if answer_identifier in answer:
-        answer_prefix_start_idx = answer.index(answer_identifier)
-        reasoning = remove_hash(answer[:answer_prefix_start_idx].strip())
-
-        # ==== Enable it if we want to add "answer" as part of output
-        answer = answer[answer_prefix_start_idx:].strip()
-        assert len(answer) > 0
-        # answer = "Answer: " + answer
-        return f"{reasoning}\n{answer.strip()}"
-    else:
+    if answer_identifier not in answer:
         return answer
+    answer_prefix_start_idx = answer.index(answer_identifier)
+    reasoning = remove_hash(answer[:answer_prefix_start_idx].strip())
+
+    # ==== Enable it if we want to add "answer" as part of output
+    answer = answer[answer_prefix_start_idx:].strip()
+    assert len(answer) > 0
+    # answer = "Answer: " + answer
+    return f"{reasoning}\n{answer.strip()}"
 
 new_math_recs = []
 valid_records = 0
@@ -39,9 +36,10 @@ print(f"math_instruct_dataset size: {len(math_instruct_dataset['train'])}")
 for each in math_instruct_dataset["train"]:
 
     if each['source'] in valid_sources:
-        output = {}
-        output['instruction'] = ""
-        output['input'] = modify_input(each['instruction']).strip()
+        output = {
+            'instruction': "",
+            'input': modify_input(each['instruction']).strip(),
+        }
         output['output'] = format_response(each['output'], "The answer is:").strip()
 
         new_math_recs.append(output)
@@ -58,8 +56,7 @@ for each in new_math_recs:
     if len(each['input'].split(" ")) <= 4 or len(each['output'].split(" ")) < 1:
         continue
 
-    rec = {}
-    rec['question'] = ''
+    rec = {'question': ''}
     if len(each['instruction'].strip()) > 0:
         rec['question'] += f"{instruction_prefix}{each['instruction']}\n\n"
     rec['question'] += f"{input_prefix}{each['input']}\n\n"

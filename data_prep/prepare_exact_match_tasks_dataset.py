@@ -27,12 +27,11 @@ def process_file(file_path):
         prediction = extract_answer(rec["prediction"])
         is_correct = False
 
-        out_rec = {}
-        out_rec['instruction'] = fetch_instruction(rec["task_file"])
+        out_rec = {'instruction': fetch_instruction(rec["task_file"])}
         out_rec['input'] = rec["orig_input"]
         out_rec['output'] = ground_truth[0]
 
-        if any([x == prediction for x in ground_truth]):
+        if any(x == prediction for x in ground_truth):
             is_correct = True
 
         if not is_correct:
@@ -47,11 +46,11 @@ def process_file(file_path):
     file_name = file_path.split("/home/minimalist/Downloads/super_NI_mistral_inference_output/1_word/")[1]
     print(f"\n{file_name}: #task_records {len(data)}, Incorrect: {1-task_accuracy}\nOVERALL: #total_records: {total_rec}, total_incorrect: {incorrect} Incorect: {incorrect / total_rec}")
 
-    output = {}
-    output['source'] = file_name
-    output["accuracy"] = task_accuracy
-    output["instances"] = incorrect_predictions
-
+    output = {
+        'source': file_name,
+        "accuracy": task_accuracy,
+        "instances": incorrect_predictions,
+    }
     with open(f"{output_dir}/{file_name}", 'w') as f:
         json.dump(output, f, indent=1)
 
@@ -76,17 +75,11 @@ def sample_by_accuracy(file_path, multiplication_factor = 1.0):
     print(f"#records after removing long inputs: {len(instances)}")
 
     bucket_id = math.floor(int((accuracy*100)/10))
-    if bucket_id == 0:
+    if bucket_id in [0, 1]:
         samples = int(350*multiplication_factor)
-    elif bucket_id == 1:
-        samples = int(350*multiplication_factor)
-    elif bucket_id == 2:
+    elif bucket_id in [2, 3]:
         samples = int(300*multiplication_factor)
-    elif bucket_id == 3:
-        samples = int(300*multiplication_factor)
-    elif bucket_id == 4:
-        samples = int(250*multiplication_factor)
-    elif bucket_id == 5:
+    elif bucket_id in [4, 5]:
         samples = int(250*multiplication_factor)
     elif bucket_id == 6:
         samples = int(200*multiplication_factor)
@@ -98,8 +91,7 @@ def sample_by_accuracy(file_path, multiplication_factor = 1.0):
         samples = int(50 * multiplication_factor)
 
     random.shuffle(instances)
-    sampled_data = instances[:samples]
-    return sampled_data
+    return instances[:samples]
 
 
 def prepare_training_data(multiplication_factor = 1.0):
@@ -114,7 +106,7 @@ def prepare_training_data(multiplication_factor = 1.0):
         training_data.extend(sampled_data)
         print(f"Total data so far: {len(training_data)}\n\n")
 
-    with open(f"/home/minimalist/Downloads/nips_training_data/super_natural_1_word_data_{str(int(multiplication_factor))}.json", 'w') as f:
+    with open(f"/home/minimalist/Downloads/nips_training_data/super_natural_1_word_data_{int(multiplication_factor)}.json", 'w') as f:
         json.dump(training_data, f, indent=1)
 
 

@@ -179,11 +179,7 @@ class MultipackDistributedDataloader:
 
     def generate_batches(self, set_stats=False):
         LOG.info("generating packed batches")
-        if self.sampler:
-            indices = [idx for idx in self.sampler]
-        else:
-            indices = range(0, len(self.dataset))
-
+        indices = list(self.sampler) if self.sampler else range(0, len(self.dataset))
         LOG.info(hash_indices(indices))
         lengths = self.lengths[indices]
         lengths_cumsum = np.cumsum(lengths)
@@ -232,21 +228,20 @@ class MultipackDistributedDataloader:
                             if feature in item
                         ]
                         attn_mask_cum_idx += len(batched_data)
-                        concatenated[feature] = np.concatenate(arrays)
                     else:
                         arrays = [
                             np.array(item[feature])
                             for item in batched_data
                             if feature in item
                         ]
-                        concatenated[feature] = np.concatenate(arrays)
+                    concatenated[feature] = np.concatenate(arrays)
                 chunked_data.append(concatenated)
             yield self.collate_fn(chunked_data)
             len_remaining -= 1
             if not len_remaining:
                 return
         # yield a no-op for cases where we don't have any data left to pack
-        for i in range(0, len_remaining):
+        for _ in range(0, len_remaining):
             yield self.collate_fn(
                 [
                     {

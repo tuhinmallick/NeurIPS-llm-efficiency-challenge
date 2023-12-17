@@ -255,10 +255,7 @@ def load_tokenized_prepared_datasets(
                 d_prompt_style = d_type_split[1] if len(d_type_split) > 1 else None
             if "train" in ds:
                 print("\n\n============= C ================\n\n")
-                if cfg.random_split:
-                    ds = ds["train"]
-                else:
-                    ds = ds
+                ds = ds["train"] if cfg.random_split else ds
             elif (
                 isinstance(ds, DatasetDict)
                 and d.train_on_split
@@ -432,17 +429,14 @@ def load_prepare_datasets(
         seed = f"@{str(cfg.seed)}" if cfg.seed else ""
         ds_hash = str(
             md5(
-                (
-                    str(cfg.sequence_len)
-                    + "@"
-                    + str(max_packed_sequence_len)
-                    + seed
-                    + "|".join(
-                        sorted([f"{d.path}:{d.type}:{d.shards}" for d in cfg.datasets])
+                f"{str(cfg.sequence_len)}@{str(max_packed_sequence_len)}{seed}"
+                + "|".join(
+                    sorted(
+                        [f"{d.path}:{d.type}:{d.shards}" for d in cfg.datasets]
                     )
-                    + "|"
-                    + tokenizer_name
                 )
+                + "|"
+                + tokenizer_name
             )
         )
         prepared_ds_path = (
@@ -451,8 +445,8 @@ def load_prepare_datasets(
             else Path(default_dataset_prepared_path) / ds_hash
         )
 
-        dataset = None
         use_auth_token = cfg.hf_use_auth_token
+        dataset = None
         try:
             if cfg.push_dataset_to_hub:
                 LOG.info(
@@ -593,7 +587,7 @@ def load_prepare_datasets(
     if eval_dataset is not None:
         print(f"===== Eval dataset size: {len(eval_dataset)} =====")
     else:
-        print(f"===== No Eval dataset! Eval dataset size: 0 =====")
+        print("===== No Eval dataset! Eval dataset size: 0 =====")
     return train_dataset, eval_dataset
 
 
@@ -632,12 +626,7 @@ def encode_pretraining(
             new_attention_mask.append(buffer_attention_mask)
             buffer_input_ids = torch.tensor([], dtype=torch.long)
             buffer_attention_mask = torch.tensor([], dtype=torch.long)
-            buffer_input_ids = torch.cat((buffer_input_ids, ids), dim=0)
-            buffer_attention_mask = torch.cat((buffer_attention_mask, mask), dim=0)
-        elif buffer_input_ids.numel() + ids.numel() <= max_tokens:
-            buffer_input_ids = torch.cat((buffer_input_ids, ids), dim=0)
-            buffer_attention_mask = torch.cat((buffer_attention_mask, mask), dim=0)
-        else:
+        elif buffer_input_ids.numel() + ids.numel() > max_tokens:
             buffer_input_ids = torch.cat(
                 (
                     buffer_input_ids,
@@ -665,9 +654,8 @@ def encode_pretraining(
             buffer_input_ids = torch.tensor([], dtype=torch.long)
             buffer_attention_mask = torch.tensor([], dtype=torch.long)
 
-            buffer_input_ids = torch.cat((buffer_input_ids, ids), dim=0)
-            buffer_attention_mask = torch.cat((buffer_attention_mask, mask), dim=0)
-
+        buffer_input_ids = torch.cat((buffer_input_ids, ids), dim=0)
+        buffer_attention_mask = torch.cat((buffer_attention_mask, mask), dim=0)
     if buffer_input_ids.numel() > 0:  # for any leftover tokens
         while buffer_input_ids.numel() < max_tokens:  # make all sequences equal in size
             buffer_input_ids = torch.cat(
